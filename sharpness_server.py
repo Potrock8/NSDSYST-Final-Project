@@ -4,9 +4,9 @@ from PIL import Image, ImageEnhance
 import base64
 
 class SharpnessServer():
-    def __init__(self):
+    def __init__(self, ip_addr):
         self.credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters("192.168.222.128", 5672, "/", self.credentials))
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(ip_addr, 5672, "/", self.credentials))
         self.channel = self.connection.channel()
         self.channel.exchange_declare(exchange = "routing", exchange_type ="direct")
         self.queue = self.channel.queue_declare(queue = "", exclusive = True)
@@ -39,7 +39,7 @@ def callback(ch, method, properties, body):
     json_message = json.dumps(message)
 
     credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
-    connection = pika.BlockingConnection(pika.ConnectionParameters("192.168.222.128", 5672, "/", credentials))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(ip_addr, 5672, "/", credentials))
     channel = connection.channel()
     channel.exchange_declare(exchange = "routing", exchange_type = "direct")
     channel.basic_publish(exchange = "routing", routing_key = "contrast", body = json_message)
@@ -48,7 +48,8 @@ def callback(ch, method, properties, body):
     print(f"Sent {image_name} to Contrast Enhancemet Server...")
 
 def main():
-    server = SharpnessServer
+    ip_addr = print("Input this server's IP address: ");
+    server = SharpnessServer(ip_addr);
 
     server.channel.basic_consume(queue = server.queue.method.queue, auto_ack = True, on_message_callback = callback)
 

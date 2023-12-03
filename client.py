@@ -6,10 +6,10 @@ import base64
 from PIL import Image
 
 class Client():
-    def __init__(self, client_IP):
+    def __init__(self, client_IP, server_ip):
         self.client_IP = client_IP
         self.credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters("192.168.222.128", 5672, "/", self.credentials))
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(server_ip, 5672, "/", self.credentials))
         self.channel = self.connection.channel()
         self.channel.exchange_declare(exchange = "routing", exchange_type ="direct")
         self.queue = self.channel.queue_declare(queue = "", exclusive = True)
@@ -95,7 +95,8 @@ def main():
     contrast = 0.0
 
     client_IP = socket.gethostbyname(socket.gethostname())
-    client = Client(client_IP)
+    server_ip = input("Input the server IP: ");
+    client = Client(client_IP, server_ip)
 
     client.channel.basic_consume(queue = client.queue.method.queue, auto_ack = True, on_message_callback = callback)
 
