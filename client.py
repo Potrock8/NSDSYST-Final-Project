@@ -3,6 +3,18 @@ import socket
 import json
 import pika
 import base64
+from PIL import Image
+
+class Client():
+    def __init__(self, client_IP):
+        self.client_IP = client_IP
+        self.credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters("192.168.222.128", 5672, "/", self.credentials))
+        self.channel = self.connection.channel()
+        self.channel.exchange_declare(exchange = "routing", exchange_type ="direct")
+        self.queue = self.channel.queue_declare(queue = "", exclusive = True)
+        self.channel.queue_bind(exchange = "routing", queue = self.queue.method.queue, routing_key = "user." + self.client_IP)
+        self.channel.basic_qos(prefetch_count=1)
 
 def inputPrompt():
     folder_exists = False
@@ -62,6 +74,18 @@ def inputPrompt():
 
     return orig_folder, enhanced_folder, brightness, sharpness, contrast
 
+def callback(ch, method, properties, body):
+    message = json.loads(body)
+    image_name = message["image_name"]
+    image_data = base64.b64decode(message["image_data"])
+    enhanced_folder = message["enhanced_folder"]
+
+    with open(os.path.join(enhanced_folder, image_name), "wb") as image:
+        image.write(image_data)
+
+    print(f"Enhanced {image_name} saved in {enhanced_folder}")
+
+
 def main():
     orig_folder = ""
     enhanced_folder = ""
@@ -70,7 +94,12 @@ def main():
     sharpness = 0.0
     contrast = 0.0
 
-    clientIP = socket.gethostbyname(socket.gethostname())
+    client_IP = socket.gethostbyname(socket.gethostname())
+    client = Client(client_IP)
+
+    client.channel.basic_consume(queue = client.queue.method.queue, auto_ack = True, on_message_callback = callback)
+
+    client.channel.start_consuming()
 
     orig_folder, enhanced_folder, brightness, sharpness, contrast = inputPrompt()
     stats_file = enhanced_folder + "/statistics.txt"
@@ -81,7 +110,7 @@ def main():
     connection = pika.BlockingConnection(pika.ConnectionParameters("192.168.222.128", 5672, "/", credentials))
     channel = connection.channel() 
 
-    channel.exchange_declare(exchange = "routing", exchange_type ="direct")
+    channel.exchange_declare(exchange = "routing", exchange_type = "direct")
 
     for image_name in os.listdir(orig_folder):
         with open(os.path.join(orig_folder, image_name), "rb") as image:
@@ -90,9 +119,10 @@ def main():
         image_data = base64.b64encode(image_data)
         image_data = image_data.decode()
 
-        message = {"clientIP": clientIP,
+        message = {"client_IP": client_IP,
                    "image_name": image_name,
                    "image_data": image_data,
+                   "enhanced_folder": enhanced_folder,
                    "brightness": brightness,
                    "sharpness": sharpness,
                    "contrast": contrast}
