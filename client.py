@@ -116,7 +116,7 @@ def main():
     for image_name in os.listdir(orig_folder):
         with open(os.path.join(orig_folder, image_name), "rb") as image:
             print(orig_folder)
-       	    print(image_name)
+            print(image_name)
             image_data = image.read()
 
         image_data = base64.b64encode(image_data)
