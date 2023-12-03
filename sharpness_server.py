@@ -13,7 +13,7 @@ class SharpnessServer():
         self.queue = self.channel.queue_declare(queue = "", exclusive = True)
         self.channel.queue_bind(exchange = "routing", queue = self.queue.method.queue, routing_key = "sharpness")
         self.channel.basic_qos(prefetch_count=1)
-        print("Running Sharpness Server\n");
+        print("Running Sharpness Server\n")
 
 def callback(ch, method, properties, body):
     message = json.loads(body)
@@ -67,8 +67,8 @@ def callback(ch, method, properties, body):
 
 def main():
     global ip_addr
-    ip_addr = input("Input this server's IP address: ");
-    server = SharpnessServer(ip_addr);
+    ip_addr = input("Input this server's IP address: ")
+    server = SharpnessServer(ip_addr)
 
     server.channel.basic_consume(queue = server.queue.method.queue, auto_ack = True, on_message_callback = callback)
 

@@ -12,7 +12,7 @@ class BrightnessServer():
         self.queue = self.channel.queue_declare(queue = "", exclusive = True)
         self.channel.queue_bind(exchange = "routing", queue = self.queue.method.queue, routing_key = "brightness")
         self.channel.basic_qos(prefetch_count=1)
-        print("Running Brightness Server\n");
+        print("Running Brightness Server\n")
 
 def callback(ch, method, properties, body):
     message = json.loads(body)

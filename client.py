@@ -1,9 +1,15 @@
 import os
-import socket
 import json
 import pika
 import base64
 from PIL import Image
+import time
+
+file_count = 0
+stats_file = ""
+files_enhanced = 0
+start_time = 0.0
+client = None
 
 class Client():
     def __init__(self, client_IP, server_ip):
@@ -76,6 +82,8 @@ def inputPrompt():
     return orig_folder, enhanced_folder, brightness, sharpness, contrast
 
 def callback(ch, method, properties, body):
+    global file_count, stats_file, files_enhanced, start_time, client
+    files_enhanced += 1
     print("received a message")
     message = json.loads(body)
     image_name = message["image_name"]
@@ -87,23 +95,38 @@ def callback(ch, method, properties, body):
 
     print(f"Enhanced {image_name} saved in {enhanced_folder}")
 
+    if files_enhanced == file_count:
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        with open(stats_file, "w+") as file:
+            lines = ["Number of images enhanced: ", str(files_enhanced),
+                     "\nTime elapsed: ", str(elapsed_time),
+                     "\nNumber of machines used: 3"]
+            file.writelines(lines)
+            file.close()
+
+        print("All images have been processed.")
+        print(f"Statistics of the processed files can be found in {stats_file}.")
+        print("Client program shutting down...")
+        client.connection.close()
+
 
 def main():
+    global file_count, stats_file, start_time, client
     orig_folder = ""
     enhanced_folder = ""
-    stats_file = ""
     brightness = 0.0
     sharpness = 0.0
     contrast = 0.0
 
-    client_IP = input("Get client's IP address: ") 
-    server_ip = input("Input the server IP: ");
+    client_IP = input("Get client's IP address: ")
+    server_ip = input("Input the server IP: ")
     client = Client(client_IP, server_ip)
 
     client.channel.basic_consume(queue = client.queue.method.queue, auto_ack = True, on_message_callback = callback)
 
     orig_folder, enhanced_folder, brightness, sharpness, contrast = inputPrompt()
-    stats_file = enhanced_folder + "/statistics.txt"
+    stats_file = os.path.join(enhanced_folder, "statistics.txt")
 
 
     #print(brightness, sharpness, contrast)
@@ -113,7 +136,9 @@ def main():
 
     channel.exchange_declare(exchange = "routing", exchange_type = "direct")
 
+    start_time = time.time()
     for image_name in os.listdir(orig_folder):
+        file_count += 1
         with open(os.path.join(orig_folder, image_name), "rb") as image:
             print(orig_folder)
             print(image_name)

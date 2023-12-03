@@ -3,7 +3,7 @@ import json
 from PIL import Image, ImageEnhance
 import base64
 
-ip_addr = 0;
+ip_addr = 0
 class ContrastServer():
     def __init__(self, ip_addr):
         self.credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
@@ -13,7 +13,7 @@ class ContrastServer():
         self.queue = self.channel.queue_declare(queue = "", exclusive = True)
         self.channel.queue_bind(exchange = "routing", queue = self.queue.method.queue, routing_key = "contrast")
         self.channel.basic_qos(prefetch_count=1)
-       	print("Running Contrast Server\n")
+        print("Running Contrast Server\n")
 
 def callback(ch, method, properties, body):
     message = json.loads(body)
