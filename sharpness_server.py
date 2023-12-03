@@ -25,9 +25,19 @@ def callback(ch, method, properties, body):
         image.write(image_data)
 
     image = Image.open(image_name)
-    enhanced_image = ImageEnhance.Sharpness(image)
-    enhanced_image = enhanced_image.enhance(sharpness)
-    enhanced_image.save(image_name)
+    if(image_name[-3:] == "gif"):
+        new = []
+        for frame_num in range(image.n_frames):
+            image.seek(frame_num)
+            nhans_frame= Image.new('RGBA', image.size) 
+            nhans_frame.paste(image)
+            nhans_frame = ImageEnhance.Sharpness(nhans_frame).enhance(sharpness)
+            new.append(nhans_frame)
+        new[0].save(image_name, append_images=new[1:], save_all=True)
+    else:
+        enhanced_image = ImageEnhance.Sharpness(image)
+        enhanced_image = enhanced_image.enhance(sharpness)
+        enhanced_image.save(image_name)
 
     print(f"Enhanced sharpness factor of {image_name} by {sharpness}.")
 
