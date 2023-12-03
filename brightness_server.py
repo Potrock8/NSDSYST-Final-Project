@@ -6,7 +6,8 @@ import base64
 def callback(ch, method, properties, body):
     message = json.loads(body)
     image_name = message["image_name"]
-    image_data = base64.decodebytes(str(message["image_data"]))
+    image_data = base64.b64decode(message["image_data"])
+    image_data = base64.decodebytes(image_data)
     brightness = message["brightness"]
     
     with open(image_name, "wb") as image:
@@ -29,6 +30,8 @@ def main():
     channel.queue_bind(exchange = "routing", queue = queue.method.queue, routing_key = "brightness")
 
     channel.basic_consume(queue = queue.method.queue, auto_ack = True, on_message_callback = callback)
+
+    channel.start_consuming()
 
 if __name__ == "__main__":
     main()

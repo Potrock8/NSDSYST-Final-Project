@@ -87,7 +87,8 @@ def main():
         with open(os.path.join(orig_folder, image_name), "rb") as image:
             image_data = image.read()
 
-        image_data = str(base64.b64encode(image_data))
+        image_data = base64.b64encode(image_data)
+        image_data = image_data.decode()
 
         message = {"clientIP": clientIP,
                    "image_name": image_name,
