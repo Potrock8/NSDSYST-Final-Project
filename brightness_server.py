@@ -14,13 +14,13 @@ class BrightnessServer():
         self.channel.basic_qos(prefetch_count=1)
         print("Running Brightness Server\n");
 
-def callback(ch, method, properties, body, ip_addr):
+def callback(ch, method, properties, body):
     message = json.loads(body)
-    image_name = message["image_name"]
+    image_name = "original_" + message["image_name"]
     image_data = base64.b64decode(message["image_data"])
     brightness = message["brightness"]
     
-    with open("original_" + image_name, "wb") as image:
+    with open(image_name, "wb") as image:
         image.write(image_data)
 
     image = Image.open(image_name)
@@ -34,11 +34,17 @@ def callback(ch, method, properties, body, ip_addr):
         image_data = image.read()
 
     image_data = base64.b64encode(image_data).decode()
-    message = body
-    message["image_data"] = image_data
+    new_message = {"client_IP": message["client_IP"],
+                       "image_name": message["image_name"],
+                       "image_data": image_data,
+                       "enhanced_folder": message["enhanced_folder"],
+                       "brightness": message["brightness"],
+                       "sharpness": message["sharpness"],
+                       "contrast": message["contrast"]}
     
-    json_message = json.dumps(message)
+    json_message = json.dumps(new_message)
 
+    global ip_addr
     credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
     connection = pika.BlockingConnection(pika.ConnectionParameters(ip_addr, 5672, "/", credentials))
     channel = connection.channel()
@@ -48,7 +54,9 @@ def callback(ch, method, properties, body, ip_addr):
 
     print(f"Sent {image_name} to Sharpness Enhancemet Server...")
 
+ip_addr = 0
 def main():
+    global ip_addr
     ip_addr = input("Input this server's computer address: ")
     server = BrightnessServer(ip_addr)
 

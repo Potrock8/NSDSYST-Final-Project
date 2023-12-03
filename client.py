@@ -13,8 +13,9 @@ class Client():
         self.channel = self.connection.channel()
         self.channel.exchange_declare(exchange = "routing", exchange_type ="direct")
         self.queue = self.channel.queue_declare(queue = "", exclusive = True)
-        self.channel.queue_bind(exchange = "routing", queue = self.queue.method.queue, routing_key = "user." + self.client_IP)
+        self.channel.queue_bind(exchange = "routing", queue = self.queue.method.queue, routing_key = "client." + self.client_IP)
         self.channel.basic_qos(prefetch_count=1)
+        print("Launching Client")
 
 def inputPrompt():
     folder_exists = False
@@ -75,6 +76,7 @@ def inputPrompt():
     return orig_folder, enhanced_folder, brightness, sharpness, contrast
 
 def callback(ch, method, properties, body):
+    print("received a message")
     message = json.loads(body)
     image_name = message["image_name"]
     image_data = base64.b64decode(message["image_data"])
@@ -94,13 +96,11 @@ def main():
     sharpness = 0.0
     contrast = 0.0
 
-    client_IP = socket.gethostbyname(socket.gethostname())
+    client_IP = input("Get client's IP address: ") 
     server_ip = input("Input the server IP: ");
     client = Client(client_IP, server_ip)
 
     client.channel.basic_consume(queue = client.queue.method.queue, auto_ack = True, on_message_callback = callback)
-
-    client.channel.start_consuming()
 
     orig_folder, enhanced_folder, brightness, sharpness, contrast = inputPrompt()
     stats_file = enhanced_folder + "/statistics.txt"
@@ -108,13 +108,15 @@ def main():
 
     #print(brightness, sharpness, contrast)
     credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
-    connection = pika.BlockingConnection(pika.ConnectionParameters("192.168.222.128", 5672, "/", credentials))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(server_ip, 5672, "/", credentials))
     channel = connection.channel() 
 
     channel.exchange_declare(exchange = "routing", exchange_type = "direct")
 
     for image_name in os.listdir(orig_folder):
         with open(os.path.join(orig_folder, image_name), "rb") as image:
+            print(orig_folder)
+       	    print(image_name)
             image_data = image.read()
 
         image_data = base64.b64encode(image_data)
@@ -133,6 +135,7 @@ def main():
 
         print(f"Sent {image_name} for processing...")
 
+    client.channel.start_consuming()
     connection.close()
 
 if __name__ == "__main__":

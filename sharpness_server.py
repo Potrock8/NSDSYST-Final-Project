@@ -3,6 +3,7 @@ import json
 from PIL import Image, ImageEnhance
 import base64
 
+ip_addr = 0
 class SharpnessServer():
     def __init__(self, ip_addr):
         self.credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
@@ -12,14 +13,15 @@ class SharpnessServer():
         self.queue = self.channel.queue_declare(queue = "", exclusive = True)
         self.channel.queue_bind(exchange = "routing", queue = self.queue.method.queue, routing_key = "sharpness")
         self.channel.basic_qos(prefetch_count=1)
+        print("Running Sharpness Server\n");
 
 def callback(ch, method, properties, body):
     message = json.loads(body)
-    image_name = message["image_name"]
+    image_name = "original_" + message["image_name"]
     image_data = base64.b64decode(message["image_data"])
     sharpness = message["sharpness"]
     
-    with open("original_" + image_name, "wb") as image:
+    with open(image_name, "wb") as image:
         image.write(image_data)
 
     image = Image.open(image_name)
@@ -33,11 +35,17 @@ def callback(ch, method, properties, body):
         image_data = image.read()
 
     image_data = base64.b64encode(image_data).decode()
-    message = body
-    message["image_data"] = image_data
+    new_message = {"client_IP": message["client_IP"],
+                           "image_name": message["image_name"],
+                           "image_data": image_data,
+                           "enhanced_folder": message["enhanced_folder"],
+                           "brightness": message["brightness"],
+                           "sharpness": message["sharpness"],
+                           "contrast": message["contrast"]}
     
-    json_message = json.dumps(message)
-
+    json_message = json.dumps(new_message)
+    
+    global ip_addr
     credentials = pika.PlainCredentials("rabbituser", "rabbit1234")
     connection = pika.BlockingConnection(pika.ConnectionParameters(ip_addr, 5672, "/", credentials))
     channel = connection.channel()
@@ -48,7 +56,8 @@ def callback(ch, method, properties, body):
     print(f"Sent {image_name} to Contrast Enhancemet Server...")
 
 def main():
-    ip_addr = print("Input this server's IP address: ");
+    global ip_addr
+    ip_addr = input("Input this server's IP address: ");
     server = SharpnessServer(ip_addr);
 
     server.channel.basic_consume(queue = server.queue.method.queue, auto_ack = True, on_message_callback = callback)
