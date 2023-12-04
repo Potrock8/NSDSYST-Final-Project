@@ -67,7 +67,7 @@ def callback(ch, method, properties, body):
 
 def main():
     global ip_addr
-    ip_addr = input("Input this server's IP address: ")
+    ip_addr = input("Enter the rabbitmq server's IP address: ")
     server = SharpnessServer(ip_addr)
 
     server.channel.basic_consume(queue = server.queue.method.queue, auto_ack = True, on_message_callback = callback)
